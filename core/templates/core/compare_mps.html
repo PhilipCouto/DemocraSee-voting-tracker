@@ -1,0 +1,331 @@
+<!-- Save as: core/templates/core/compare_mps.html -->
+{% extends 'core/base.html' %}
+
+{% block title %}Policy Positions - DemocraSee{% endblock %}
+
+{% block extra_css %}
+<style>
+    .topic-selector {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid #e9ecef;
+    }
+
+    .topic-selector:hover {
+        border-color: #007bff;
+        box-shadow: 0 4px 8px rgba(0,123,255,0.1);
+    }
+
+    .topic-selector.selected {
+        border-color: #007bff;
+        background-color: #f8f9ff;
+    }
+
+    .policy-scale {
+        position: relative;
+        height: 60px;
+        background: linear-gradient(to right, #dc3545 0%, #ffc107 50%, #28a745 100%);
+        border-radius: 30px;
+        margin: 20px 0;
+    }
+
+    .mp-position {
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        top: 10px;
+        transform: translateX(-50%);
+    }
+
+    .mp-position:hover {
+        transform: translateX(-50%) scale(1.2);
+        z-index: 10;
+    }
+
+    .party-average {
+        position: absolute;
+        width: 4px;
+        height: 80px;
+        background-color: rgba(0,0,0,0.8);
+        top: -10px;
+        transform: translateX(-50%);
+    }
+
+    .party-average::after {
+        content: attr(data-party);
+        position: absolute;
+        top: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 12px;
+        font-weight: bold;
+        white-space: nowrap;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
+
+    .conservative-mp { background-color: #dc3545; }
+    .liberal-mp { background-color: #007bff; }
+    .ndp-mp { background-color: #ff6600; }
+    .bloc-mp { background-color: #00a0ff; }
+    .green-mp { background-color: #28a745; }
+    .other-mp { background-color: #6c757d; }
+
+    .scale-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .mp-tooltip {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.9);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        z-index: 20;
+    }
+
+    .mp-position:hover .mp-tooltip {
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="bi bi-compass me-2"></i>Policy Positions</h2>
+            <p class="text-muted">See where MPs stand on the issues that matter to you</p>
+        </div>
+    </div>
+
+    <!-- Topic Selection -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="bi bi-tags me-2"></i>Select Policy Areas of Interest</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" id="topicForm">
+                <div class="row g-3">
+                    {% for topic in all_topics %}
+                    <div class="col-md-4 col-sm-6">
+                        <div class="topic-selector p-3 rounded text-center h-100 {% if topic.name in selected_topics %}selected{% endif %}"
+                             onclick="toggleTopic('{{ topic.name }}')">
+                            <input type="checkbox" name="topics" value="{{ topic.name }}"
+                                   {% if topic.name in selected_topics %}checked{% endif %}
+                                   style="display: none;" id="topic-{{ forloop.counter }}">
+                            <h6 class="mb-2">{{ topic.name }}</h6>
+                            <small class="text-muted">
+                                {% if topic.keywords %}
+                                {{ topic.keywords|truncatechars:60 }}
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-primary" id="analyzeBtn">
+                        <i class="bi bi-graph-up me-1"></i>Analyze Selected Topics
+                    </button>
+                    <a href="{% url 'core:compare_mps' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Clear All
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Policy Analysis Results -->
+    {% if selected_topics and topic_data %}
+    {% for topic_name, data in topic_data.items %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>{{ topic_name }}</h5>
+            <small class="text-muted">MP positions relative to party averages</small>
+        </div>
+        <div class="card-body">
+            <!-- Policy Scale Visualization -->
+            <div class="policy-scale" id="scale-{{ forloop.counter }}">
+                <!-- Party Averages -->
+                {% for party, avg_position in data.party_averages.items %}
+                <div class="party-average"
+                     style="left: {{ avg_position }}%;"
+                     data-party="{{ party|truncatechars:10 }}">
+                </div>
+                {% endfor %}
+
+                <!-- Individual MP Positions -->
+                {% for mp_data in data.mps_positions %}
+                <div class="mp-position
+                    {% if 'Conservative' in mp_data.party %}conservative-mp
+                    {% elif 'Liberal' in mp_data.party %}liberal-mp
+                    {% elif 'Democratic' in mp_data.party %}ndp-mp
+                    {% elif 'Bloc' in mp_data.party %}bloc-mp
+                    {% elif 'Green' in mp_data.party %}green-mp
+                    {% else %}other-mp{% endif %}"
+                     style="left: {{ mp_data.position }}%;"
+                     onclick="showMPDetail('{{ mp_data.mp.id }}')">
+                    <div class="mp-tooltip">
+                        <strong>{{ mp_data.mp.name }}</strong><br>
+                        {{ mp_data.mp.constituency }}<br>
+                        {{ mp_data.party }}<br>
+                        Position: {{ mp_data.strength }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Scale Labels -->
+            <div class="scale-labels">
+                <span class="text-danger">Opposes</span>
+                <span class="text-warning">Moderate</span>
+                <span class="text-success">Supports</span>
+            </div>
+
+            <!-- Legend -->
+            <div class="mt-4">
+                <h6>Party Legend:</h6>
+                <div class="d-flex flex-wrap gap-3">
+                    <div class="d-flex align-items-center">
+                        <div class="conservative-mp" style="width: 20px; height: 20px; border-radius: 50%; margin-right: 8px;"></div>
+                        <small>Conservative</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="liberal-mp" style="width: 20px; height: 20px; border-radius: 50%; margin-right: 8px;"></div>
+                        <small>Liberal</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="ndp-mp" style="width: 20px; height: 20px; border-radius: 50%; margin-right: 8px;"></div>
+                        <small>NDP</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="bloc-mp" style="width: 20px; height: 20px; border-radius: 50%; margin-right: 8px;"></div>
+                        <small>Bloc Québécois</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="green-mp" style="width: 20px; height: 20px; border-radius: 50%; margin-right: 8px;"></div>
+                        <small>Green</small>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <strong>Black lines</strong> show party averages.
+                        <strong>Colored dots</strong> show individual MP positions.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Summary Statistics -->
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="bi bi-bar-chart me-2"></i>Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h4 class="text-primary">{{ selected_topics|length }}</h4>
+                        <small class="text-muted">Policy Areas Analyzed</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h4 class="text-success">20</h4>
+                        <small class="text-muted">MPs Positioned</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h4 class="text-info">5</h4>
+                        <small class="text-muted">Party Averages</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% elif selected_topics %}
+    <!-- No data available -->
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-graph-up text-muted" style="font-size: 3rem;"></i>
+            <h4 class="mt-3">Analysis In Progress</h4>
+            <p class="text-muted">
+                Policy positioning analysis requires sufficient voting data.<br>
+                Please ensure you have scraped parliamentary votes and individual MP votes.
+            </p>
+            <a href="{% url 'core:vote_list' %}" class="btn btn-primary">
+                View Available Voting Data
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+function toggleTopic(topicName) {
+    const checkbox = document.querySelector(`input[value="${topicName}"]`);
+    const selector = checkbox.closest('.topic-selector');
+
+    checkbox.checked = !checkbox.checked;
+
+    if (checkbox.checked) {
+        selector.classList.add('selected');
+    } else {
+        selector.classList.remove('selected');
+    }
+
+    updateAnalyzeButton();
+}
+
+function updateAnalyzeButton() {
+    const checkedBoxes = document.querySelectorAll('input[name="topics"]:checked');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+
+    if (checkedBoxes.length > 0) {
+        analyzeBtn.disabled = false;
+        analyzeBtn.innerHTML = `<i class="bi bi-graph-up me-1"></i>Analyze ${checkedBoxes.length} Selected Topic${checkedBoxes.length > 1 ? 's' : ''}`;
+    } else {
+        analyzeBtn.disabled = false;
+        analyzeBtn.innerHTML = '<i class="bi bi-graph-up me-1"></i>Analyze Selected Topics';
+    }
+}
+
+function showMPDetail(mpId) {
+    // Navigate to MP detail page
+    window.location.href = `/mps/${mpId}/`;
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    updateAnalyzeButton();
+});
+</script>
+{% endblock %}
+{% endblock %}

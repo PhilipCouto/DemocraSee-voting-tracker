@@ -1,0 +1,188 @@
+<!-- Save as: core/templates/core/mp_detail.html -->
+{% extends 'core/base.html' %}
+
+{% block title %}{{ mp.name }} - MP Profile - DemocraSee{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Back Navigation -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'core:mp_list' %}">MPs</a></li>
+            <li class="breadcrumb-item active">{{ mp.name }}</li>
+        </ol>
+    </nav>
+
+    <!-- MP Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ mp.name }}</h1>
+            {% if mp.honourific_title %}
+            <p class="text-muted fs-5">{{ mp.honourific_title }}</p>
+            {% endif %}
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge bg-primary fs-6">{{ mp.status }}</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - MP Info -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-person-badge me-2"></i>MP Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Constituency:</strong><br>
+                        <span class="text-muted">{{ mp.constituency }}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Province:</strong><br>
+                        <span class="text-muted">{{ mp.province }}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Political Affiliation:</strong><br>
+                        <span class="badge bg-secondary">{{ mp.political_affiliation }}</span>
+                    </div>
+
+                    {% if mp.party_code %}
+                    <div class="mb-3">
+                        <strong>Party Code:</strong><br>
+                        <span class="text-muted">{{ mp.party_code }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if mp.first_elected %}
+                    <div class="mb-3">
+                        <strong>First Elected:</strong><br>
+                        <span class="text-muted">{{ mp.first_elected }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Voting Statistics -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-graph-up me-2"></i>Voting Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Total Votes:</strong><br>
+                        <span class="text-primary fs-4">{{ vote_count }}</span>
+                    </div>
+
+                    <!-- You can add more stats here later -->
+                    <small class="text-muted">
+                        Statistics based on available voting records in our database.
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Recent Votes -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="bi bi-clock-history me-2"></i>Recent Voting Record</h5>
+                    <small class="text-muted">Last {{ recent_votes|length }} votes</small>
+                </div>
+                <div class="card-body">
+                    {% if recent_votes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Vote</th>
+                                    <th>Subject</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mp_vote in recent_votes %}
+                                <tr>
+                                    <td>
+                                        {% if mp_vote.vote_record.vote_date %}
+                                        {{ mp_vote.vote_record.vote_date|date:"M d, Y" }}
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge
+                                            {% if mp_vote.vote == 'YEA' %}bg-success
+                                            {% elif mp_vote.vote == 'NAY' %}bg-danger
+                                            {% elif mp_vote.vote == 'PAIRED' %}bg-warning
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ mp_vote.vote }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'core:vote_detail' mp_vote.vote_record.id %}"
+                                           class="text-decoration-none">
+                                            {{ mp_vote.vote_record.subject|truncatechars:60 }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ mp_vote.vote_record.vote_result }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <a href="{% url 'core:vote_list' %}?mp={{ mp.id }}" class="btn btn-outline-primary">
+                            View All Votes by {{ mp.name }}
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
+                        <p class="text-muted mt-2">No voting records available for this MP.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Policy Stances (placeholder for future enhancement) -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-compass me-2"></i>Policy Positions</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        <i class="bi bi-tools me-1"></i>
+                        Policy stance analysis coming soon! This will show how {{ mp.name }}
+                        typically votes on key policy areas.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex gap-2 justify-content-center">
+                <a href="{% url 'core:compare_mps' %}?mp_ids={{ mp.id }}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left-right me-1"></i>Compare with Other MPs
+                </a>
+                <a href="{% url 'core:vote_list' %}?mp={{ mp.id }}" class="btn btn-outline-primary">
+                    <i class="bi bi-list-ul me-1"></i>View All Votes
+                </a>
+                <a href="{% url 'core:mp_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to MP List
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

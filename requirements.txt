@@ -1,0 +1,38 @@
+# Core Django framework
+django==4.2.16
+
+# Database
+psycopg2-binary==2.9.9    # PostgreSQL adapter (recommended for production)
+
+# API Development
+djangorestframework==3.14.0    # For building REST APIs
+django-cors-headers==4.3.1     # Handle CORS for frontend connection
+
+# Environment & Security
+python-dotenv==1.0.0      # Environment variables
+django-environ==0.11.2    # Django-specific env management
+
+# Authentication
+djangorestframework-simplejwt==5.3.1    # JWT authentication for API
+
+# Development Tools
+django-extensions==3.2.3   # Helpful Django tools (shell_plus, etc.)
+
+# Testing (optional but recommended)
+pytest==8.2.2
+pytest-django==4.8.0
+
+# Code Quality (optional)
+black==24.4.2             # Code formatter
+flake8==7.0.0            # Linter
+
+# Web Scraping
+beautifulsoup4==4.12.3
+requests==2.31.0
+urllib3==2.2.1
+
+# Data Processing
+pandas==2.2.2
+
+# Optional but recommended
+lxml==5.1.0

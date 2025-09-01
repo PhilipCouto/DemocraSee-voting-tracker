@@ -1,0 +1,253 @@
+<!-- Save as: core/templates/core/vote_detail.html -->
+{% extends 'core/base.html' %}
+
+{% block title %}Vote #{{ vote.vote_number }} - {{ vote.subject|truncatechars:50 }} - DemocraSee{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Back Navigation -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'core:vote_list' %}">Votes</a></li>
+            <li class="breadcrumb-item active">Vote #{{ vote.vote_number }}</li>
+        </ol>
+    </nav>
+
+    <!-- Vote Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ vote.subject }}</h1>
+            <div class="d-flex flex-wrap gap-3 mt-3">
+                <span class="text-muted">
+                    <i class="bi bi-calendar me-1"></i>
+                    {% if vote.vote_date %}{{ vote.vote_date|date:"F d, Y" }}{% else %}Date not available{% endif %}
+                </span>
+                <span class="text-muted">
+                    <i class="bi bi-hash me-1"></i>Vote #{{ vote.vote_number }}
+                </span>
+                {% if vote.parliament %}
+                <span class="text-muted">
+                    <i class="bi bi-building me-1"></i>{{ vote.parliament.number }}th Parliament
+                </span>
+                {% endif %}
+                {% if vote.session %}
+                <span class="text-muted">Session {{ vote.session }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="mb-2">
+                <span class="badge fs-5
+                    {% if vote.vote_result == 'AGREED' or vote.vote_result == 'CARRIED' %}bg-success
+                    {% elif vote.vote_result == 'NEGATIVED' or vote.vote_result == 'DEFEATED' %}bg-danger
+                    {% else %}bg-secondary{% endif %}">
+                    {{ vote.vote_result|default:"Result Unknown" }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - Vote Summary -->
+        <div class="col-md-4">
+            <!-- Vote Counts -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-graph-up me-2"></i>Vote Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="border-end">
+                                <h3 class="text-success">{{ vote.yea_count|default:0 }}</h3>
+                                <small class="text-muted">YEA</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border-end">
+                                <h3 class="text-danger">{{ vote.nay_count|default:0 }}</h3>
+                                <small class="text-muted">NAY</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="text-warning">{{ vote.paired_count|default:0 }}</h3>
+                            <small class="text-muted">PAIRED</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Policy Classification -->
+            {% if vote.policy_tags %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-tags me-2"></i>Policy Areas</h5>
+                </div>
+                <div class="card-body">
+                    {% for tag in vote.policy_tags %}
+                    <span class="policy-tag d-inline-block mb-1">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Related Bill -->
+            {% if vote.related_bill %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-file-text me-2"></i>Related Bill</h5>
+                </div>
+                <div class="card-body">
+                    <h6>{{ vote.related_bill.bill_number }}</h6>
+                    <p class="small text-muted">{{ vote.related_bill.subject|truncatechars:100 }}</p>
+                    {% if vote.related_bill.bill_url %}
+                    <a href="{{ vote.related_bill.bill_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        View Bill <i class="bi bi-external-link"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Vote Type -->
+            {% if vote.vote_type %}
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-info-circle me-2"></i>Vote Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong>Type:</strong> {{ vote.vote_type }}
+                    </div>
+                    {% if vote.sitting_number %}
+                    <div class="mb-2">
+                        <strong>Sitting:</strong> #{{ vote.sitting_number }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Party Breakdown and MP Votes -->
+        <div class="col-md-8">
+            <!-- Party Breakdown -->
+            {% if party_breakdown %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="bi bi-people me-2"></i>Party Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Party</th>
+                                    <th class="text-center">YEA</th>
+                                    <th class="text-center">NAY</th>
+                                    <th class="text-center">PAIRED</th>
+                                    <th class="text-center">ABSENT</th>
+                                    <th class="text-center">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for party, votes in party_breakdown.items %}
+                                <tr>
+                                    <td><strong>{{ party }}</strong></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success">{{ votes.YEA }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-danger">{{ votes.NAY }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-warning">{{ votes.PAIRED }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">{{ votes.ABSENT }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <strong>{{ votes.YEA|add:votes.NAY|add:votes.PAIRED|add:votes.ABSENT }}</strong>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Individual MP Votes -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="bi bi-person-check me-2"></i>Individual MP Votes</h5>
+                    <small class="text-muted">{{ mp_votes.count }} MPs</small>
+                </div>
+                <div class="card-body">
+                    {% if mp_votes %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th>MP Name</th>
+                                    <th>Constituency</th>
+                                    <th>Party</th>
+                                    <th class="text-center">Vote</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mp_vote in mp_votes %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'core:mp_detail' mp_vote.mp.id %}" class="text-decoration-none">
+                                            {{ mp_vote.mp.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ mp_vote.mp.constituency }}</td>
+                                    <td>
+                                        <small class="badge bg-light text-dark">{{ mp_vote.mp.party_code|default:mp_vote.mp.political_affiliation }}</small>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge
+                                            {% if mp_vote.vote == 'YEA' %}bg-success
+                                            {% elif mp_vote.vote == 'NAY' %}bg-danger
+                                            {% elif mp_vote.vote == 'PAIRED' %}bg-warning text-dark
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ mp_vote.vote }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox text-muted" style="font-size: 2rem;"></i>
+                        <p class="text-muted mt-2">No individual MP votes recorded for this vote.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex gap-2 justify-content-center">
+                <a href="{% url 'core:vote_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Vote List
+                </a>
+                {% if vote.related_bill and vote.related_bill.bill_url %}
+                <a href="{{ vote.related_bill.bill_url }}" target="_blank" class="btn btn-outline-primary">
+                    <i class="bi bi-file-text me-1"></i>View Related Bill
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

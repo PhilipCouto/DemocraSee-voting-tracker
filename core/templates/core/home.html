@@ -1,0 +1,185 @@
+<!-- Save this as: core/templates/core/home.html -->
+{% extends 'core/base.html' %}
+
+{% block title %}DemocraSee - Canadian Parliamentary Transparency{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold mb-4">Parliamentary Transparency Made Simple</h1>
+        <p class="lead mb-4">Explore how your Members of Parliament vote on issues that matter to you</p>
+
+        <!-- Stats -->
+        <div class="row g-4 mb-5">
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h3 class="fw-bold">{{ total_mps|default:"0" }}</h3>
+                    <p class="mb-0">Active MPs</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h3 class="fw-bold">{{ total_votes|default:"0" }}</h3>
+                    <p class="mb-0">Voting Records</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h3 class="fw-bold">{{ total_bills|default:"0" }}</h3>
+                    <p class="mb-0">Bills Tracked</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h3 class="fw-bold">{{ policy_topics|length|default:"0" }}</h3>
+                    <p class="mb-0">Policy Areas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Search Section -->
+<div class="container">
+    <div class="search-container">
+        <h3 class="text-center mb-4">Find Your MP or Explore Voting Records</h3>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-person-fill text-primary fs-1 mb-3"></i>
+                        <h5>Find Your MP</h5>
+                        <p class="text-muted">Search by name, constituency, or party</p>
+                        <form action="{% url 'core:mp_list' %}" method="get">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" name="q"
+                                       placeholder="MP name or constituency...">
+                                <button class="btn btn-primary" type="submit">Search</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-clipboard-check text-primary fs-1 mb-3"></i>
+                        <h5>Explore Votes</h5>
+                        <p class="text-muted">Browse parliamentary voting records</p>
+                        <form action="{% url 'core:vote_list' %}" method="get">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" name="q"
+                                       placeholder="Search votes...">
+                                <button class="btn btn-primary" type="submit">Search</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Policy Topics -->
+    {% if policy_topics %}
+    <section class="mt-5">
+        <h3 class="text-center mb-4">Explore by Policy Area</h3>
+        <div class="row g-3">
+            {% for topic in policy_topics %}
+            <div class="col-md-3 col-sm-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="card-title">{{ topic.name }}</h6>
+                        <a href="{% url 'core:vote_list' %}?policy={{ topic.name }}"
+                           class="btn btn-outline-primary btn-sm">View Votes</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Recent Votes -->
+    {% if recent_votes %}
+    <section class="mt-5">
+        <h3 class="mb-4">Recent Parliamentary Votes</h3>
+        <div class="row">
+            {% for vote in recent_votes %}
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <a href="{% url 'core:vote_detail' vote.id %}" class="text-decoration-none">
+                                {{ vote.subject|truncatechars:80 }}
+                            </a>
+                        </h6>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                {% if vote.vote_date %}{{ vote.vote_date }}{% endif %}
+                                | Vote #{{ vote.vote_number }}
+                            </small>
+                            <span class="badge bg-{% if vote.vote_result == 'AGREED' %}success{% else %}danger{% endif %}">
+                                {{ vote.vote_result }}
+                            </span>
+                        </div>
+                        {% if vote.policy_tags %}
+                        <div class="mt-2">
+                            {% for tag in vote.policy_tags|slice:":3" %}
+                            <span class="policy-tag">{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="{% url 'core:vote_list' %}" class="btn btn-primary">View All Votes</a>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Quick Actions -->
+    <section class="mt-5 mb-5">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="bi bi-arrow-left-right text-primary fs-1 mb-3"></i>
+                        <h5>Compare MPs</h5>
+                        <p class="text-muted">See how different MPs vote on key issues</p>
+                        <a href="{% url 'core:compare_mps' %}" class="btn btn-primary">Start Comparing</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="bi bi-people text-primary fs-1 mb-3"></i>
+                        <h5>Browse All MPs</h5>
+                        <p class="text-muted">Explore all Members of Parliament</p>
+                        <a href="{% url 'core:mp_list' %}" class="btn btn-primary">Browse MPs</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="bi bi-graph-up text-primary fs-1 mb-3"></i>
+                        <h5>Voting Trends</h5>
+                        <p class="text-muted">Analyze parliamentary voting patterns</p>
+                        <a href="{% url 'core:vote_list' %}" class="btn btn-primary">View Trends</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

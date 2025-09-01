@@ -1,0 +1,183 @@
+<!-- Save as: core/templates/core/vote_list.html -->
+{% extends 'core/base.html' %}
+
+{% block title %}Parliamentary Votes - DemocraSee{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="bi bi-clipboard-check me-2"></i>Parliamentary Voting Records</h2>
+            <p class="text-muted">Browse and search all parliamentary votes</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge bg-primary fs-6">{{ page_obj.paginator.count }} Total Votes</span>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <label for="search" class="form-label">Search Votes</label>
+                    <input type="text" class="form-control" id="search" name="q"
+                           placeholder="Search vote subjects..." value="{{ query }}">
+                </div>
+
+                <div class="col-md-3">
+                    <label for="parliament" class="form-label">Parliament</label>
+                    <select class="form-select" id="parliament" name="parliament">
+                        <option value="">All Parliaments</option>
+                        {% for parl in parliaments %}
+                        <option value="{{ parl.number }}" {% if selected_parliament == parl.number|stringformat:"s" %}selected{% endif %}>
+                            {{ parl.number }}th Parliament
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="policy" class="form-label">Policy Area</label>
+                    <select class="form-select" id="policy" name="policy">
+                        <option value="">All Policy Areas</option>
+                        {% for topic in policy_topics %}
+                        <option value="{{ topic.name }}" {% if selected_policy == topic.name %}selected{% endif %}>
+                            {{ topic.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>Search
+                    </button>
+                    <a href="{% url 'core:vote_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results -->
+    {% if page_obj %}
+    <div class="row">
+        {% for vote in page_obj %}
+        <div class="col-12 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 class="card-title">
+                                <a href="{% url 'core:vote_detail' vote.id %}" class="text-decoration-none">
+                                    {{ vote.subject|truncatechars:100 }}
+                                </a>
+                            </h5>
+
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar me-1"></i>
+                                    {% if vote.vote_date %}{{ vote.vote_date|date:"M d, Y" }}{% else %}Date N/A{% endif %}
+                                </small>
+                                <small class="text-muted">
+                                    <i class="bi bi-hash me-1"></i>Vote #{{ vote.vote_number }}
+                                </small>
+                                {% if vote.parliament %}
+                                <small class="text-muted">
+                                    <i class="bi bi-building me-1"></i>{{ vote.parliament.number }}th Parliament
+                                </small>
+                                {% endif %}
+                                {% if vote.session %}
+                                <small class="text-muted">
+                                    Session {{ vote.session }}
+                                </small>
+                                {% endif %}
+                            </div>
+
+                            <!-- Policy Tags -->
+                            {% if vote.policy_tags %}
+                            <div class="mb-2">
+                                {% for tag in vote.policy_tags|slice:":3" %}
+                                <span class="policy-tag">{{ tag }}</span>
+                                {% endfor %}
+                                {% if vote.policy_tags|length > 3 %}
+                                <span class="policy-tag">+{{ vote.policy_tags|length|add:"-3" }} more</span>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4 text-end">
+                            <div class="mb-2">
+                                <span class="badge fs-6
+                                    {% if vote.vote_result == 'AGREED' or vote.vote_result == 'CARRIED' %}bg-success
+                                    {% elif vote.vote_result == 'NEGATIVED' or vote.vote_result == 'DEFEATED' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ vote.vote_result|default:"Unknown" }}
+                                </span>
+                            </div>
+
+                            <div class="small text-muted">
+                                {% if vote.yea_count or vote.nay_count %}
+                                <div>Yea: {{ vote.yea_count|default:0 }} | Nay: {{ vote.nay_count|default:0 }}</div>
+                                {% endif %}
+                                {% if vote.paired_count %}
+                                <div>Paired: {{ vote.paired_count }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mt-2">
+                                <a href="{% url 'core:vote_detail' vote.id %}" class="btn btn-sm btn-outline-primary">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Vote pagination">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?{% if query %}q={{ query }}&{% endif %}{% if selected_parliament %}parliament={{ selected_parliament }}&{% endif %}{% if selected_policy %}policy={{ selected_policy }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                    Previous
+                </a>
+            </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+            </li>
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?{% if query %}q={{ query }}&{% endif %}{% if selected_parliament %}parliament={{ selected_parliament }}&{% endif %}{% if selected_policy %}policy={{ selected_policy }}&{% endif %}page={{ page_obj.next_page_number }}">
+                    Next
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+        <h4 class="mt-3">No Votes Found</h4>
+        <p class="text-muted">Try adjusting your search criteria.</p>
+        <a href="{% url 'core:vote_list' %}" class="btn btn-primary">View All Votes</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
